@@ -21,6 +21,32 @@ const (
 	RESET_COLOR         = "\033[0m"  // resetting the color
 )
 
+var files_to_filter = []string{
+	".jpg",
+	".jpeg",
+	".png",
+	".gif",
+	".git",
+	".ttf",
+	".tga",
+	".dds",
+	".ico",
+	".eot",
+	".pdf",
+	".swf",
+	".jar",
+	".zip",
+	".cmap",
+	".webp",
+	".webm",
+	".ogg",
+	".wav",
+	".mp4",
+	".mp3",
+	".jar",
+	".war",
+	".class"}
+
 // Helper functions
 func split(s, sep string) []string {
 	return str.Split(s, sep)
@@ -107,8 +133,18 @@ func main() {
 	waitGroup.Wait()
 }
 
+func filesFilter(candidate string, list_of_of_matches []string) bool {
+	for _, each_match := range list_of_of_matches {
+		if str.Contains(candidate, each_match) {
+			return true
+		}
+	}
+	return false
+}
+
 func walkFunc(path string, d fs.DirEntry, err error) error {
-	if d.Type().IsRegular() {
+	// TODO: this filter of file we don't want to search in is not exhaustive, figure out how to filter based on file type
+	if !filesFilter(path, files_to_filter) && d.Type().IsRegular() {
 		waitGroup.Add(1)
 		go read_file(path)
 	}
@@ -157,12 +193,12 @@ func find_match(line string) foundResult {
 	var result foundResult
 
 	lowerCaseLine := str.ToLower(str.TrimSpace(line))
+	originalCaseLine := split(str.TrimSpace(line), " ")
 	lowerCaseInput := str.ToLower(str.TrimSpace(*input_to_find))
 
 	if found := str.Contains(lowerCaseLine, lowerCaseInput); found { // if a match was found
 
 		foundLine := split(lowerCaseLine, " ")
-		originalCaseLine := split(str.TrimSpace(line), " ")
 		inputToFind := split(lowerCaseInput, " ")
 
 		var (
@@ -189,10 +225,15 @@ func find_match(line string) foundResult {
 						coloredLine: join(originalCaseLine, " "),
 					}
 				} else { // if partial match is found
-					copy(foundMatch, addColor(foundMatch, PARTIAL_MATCH_COLOR)) // replacing the part of that line with colored equivalent
-					result = foundResult{
-						wasFound:    true,
-						coloredLine: join(originalCaseLine, " "),
+					// if the input is more than one word, and it wasn't only that one word out of the entire input that was matched (because we're not searching for parts, but for the whole thing):
+					if (len(inputToFind) > 1 && countWordsMatched != 1) ||
+						// or the input to find is just one word, but it didn't match fully (like a word inside of a word)
+						len(inputToFind) == 1 {
+						copy(foundMatch, addColor(foundMatch, PARTIAL_MATCH_COLOR)) // replacing the part of that line with colored equivalent
+						result = foundResult{
+							wasFound:    true,
+							coloredLine: join(originalCaseLine, " "),
+						}
 					}
 				}
 			}
@@ -210,7 +251,7 @@ func countMatches(foundLineFromMatch []string, inputToFind []string) int {
 
 	for i := 0; i < len(inputToFind) && i < len(foundLineFromMatch); i++ {
 		if str.Contains(
-			foundLineFromMatch[i],
+			foundLineFromMatch[i], // TODO: need to figure out how not to match the special charters that are considered part of the same word: "^~!@#$%&()_+={}[\\/]|:;“’<,>.?*"
 			inputToFind[i]) {
 			resultSlice = append(resultSlice, inputToFind[i])
 		}
