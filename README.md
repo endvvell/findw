@@ -18,6 +18,6 @@ findw -w "a word or a phrase to find" [-d ~/some/path]
 
 ## Preview
 
-(preview is od the old version of the script)
+(preview is of the old version of the script)
 
 ![findw_preview](https://user-images.githubusercontent.com/34137807/169920561-fae69420-24fc-4738-84c7-22b051f094cf.png)
